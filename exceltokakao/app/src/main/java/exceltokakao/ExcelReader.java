@@ -1,49 +1,121 @@
-// package exceltokakao;
+package exceltokakao;
 
-// import org.apache.poi.ss.usermodel.*;
-// // import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import java.io.BufferedReader;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
 
-// import java.io.FileInputStream;
-// import java.io.IOException;
+import org.apache.logging.log4j.message.Message;
+import org.apache.poi.ss.usermodel.*;
 
-// public class ExcelReader {
-// public static void main(String[] args) {
-// String filePath = "파일명.xlsx";
-// String fieldName = "특정 필드명";
+public class ExcelReader {
 
-// try (FileInputStream fis = new FileInputStream(filePath);
-// // Workbook workbook = new XSSFWorkbook(fis)) {
+    public static void main(String[] args) {
+        try {
+            // 엑셀 파일 경로
+            String filePath = "고객정보.xlsx";
 
-// Sheet sheet = workbook.getSheetAt(0); // 첫 번째 시트 선택
-// int columnIndex = -1;
+            FileInputStream file = new FileInputStream(filePath);
 
-// Row headerRow = sheet.getRow(0);
-// for (Cell cell : headerRow) {
-// if (cell.getStringCellValue().equals(fieldName)) {
-// columnIndex = cell.getColumnIndex();
-// break;
-// }
-// }
+            // 워크북 열기
+            Workbook workbook = WorkbookFactory.create(file);
 
-// if (columnIndex != -1) {
-// for (int i = 1; i <= sheet.getLastRowNum(); i++) {
-// Row dataRow = sheet.getRow(i);
-// Cell cell = dataRow.getCell(columnIndex);
+            // 첫 번째 시트 선택
+            Sheet sheet = workbook.getSheetAt(0);
 
-// if (cell != null) {
-// String fieldValue = cell.getStringCellValue();
-// // 추출한 데이터를 활용하여 원하는 작업 수행
-// sendKakaoMessage(fieldValue);
-// }
-// }
-// }
+            // 각 행(iterate rows)
+            for (Row row : sheet) {
+                // 첫 번째 열의 데이터 읽기 (고객 이름)
+                Cell nameCell = row.getCell(0);
+                if (nameCell != null) {
+                    String customerName = "";
+                    switch (nameCell.getCellType()) {
+                        case STRING:
+                            customerName = nameCell.getStringCellValue();
+                            break;
+                        default:
+                            // 처리하지 않는 셀 타입에 대한 기본 처리
+                            break;
+                    }
 
-// } catch (IOException e) {
-// e.printStackTrace();
-// }
-// }
+                    // 두 번째 열의 데이터 읽기 (전화번호)
+                    Cell phoneCell = row.getCell(1);
+                    if (phoneCell != null) {
+                        String phoneNumber = "";
+                        switch (phoneCell.getCellType()) {
+                            case STRING:
+                                phoneNumber = phoneCell.getStringCellValue();
+                                break;
+                            default:
+                                // 처리하지 않는 셀 타입에 대한 기본 처리
+                                break;
+                        }
 
-// private static void sendKakaoMessage(String fieldValue) {
-// // 카카오톡 메시지를 보내는 코드 작성
-// }
-// }
+                        String message = customerName + "님, 안녕하세요. 주문이 완료되었습니다.";
+
+                        // 고객 정보를 기반으로 카카오톡 메시지 발송
+                        try {
+                            sendKakaoTalkMessage(phoneNumber, customerName);
+                        } catch (Exception e) {
+
+                            e.printStackTrace();
+                        }
+                    }
+                }
+            }
+
+            // 워크북 닫기
+            workbook.close();
+
+            // 파일 닫기
+            file.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private static void sendKakaoTalkMessage(String phoneNumber, String name) throws Exception {
+        // API 요청 URL
+        String url = "https://kapi.kakao.com/v2/api/talk/memo/send";
+
+        // 카카오톡 API 토큰
+        String accessToken = "Q4O0vGi2wd9zfs5kgFONmFqud4CpIIBVM769RbPiCj10mQAAAYjoRQWA";
+        String message = name + "님, 안녕하세요. 주문이 완료되었습니다.";
+
+        // 요청 헤더 설정
+        HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
+        conn.setRequestMethod("POST");
+        conn.setRequestProperty("Authorization", "Bearer " + accessToken);
+        conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded;charset=utf-8");
+
+        // 요청 바디 설정
+        String requestBody = "template_object={\"object_type\":\"text\",\"text\":\"" + message
+                + "\",\"link\":{\"web_url\":\"\"},\"button_title\":\"\",\"template_id\":\"95312\"}";
+        conn.setDoOutput(true);
+        OutputStream outputStream = conn.getOutputStream();
+        outputStream.write(requestBody.getBytes());
+        outputStream.flush();
+        outputStream.close();
+
+        // 응답 처리
+        int responseCode = conn.getResponseCode();
+        BufferedReader reader;
+        if (responseCode == HttpURLConnection.HTTP_OK) {
+            reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+        } else {
+            reader = new BufferedReader(new InputStreamReader(conn.getErrorStream()));
+        }
+
+        StringBuilder response = new StringBuilder();
+        String line;
+        while ((line = reader.readLine()) != null) {
+            response.append(line);
+        }
+        reader.close();
+
+        System.out.println(response.toString());
+    }
+}
