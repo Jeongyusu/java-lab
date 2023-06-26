@@ -12,7 +12,7 @@ import java.net.URLEncoder;
 import org.apache.logging.log4j.message.Message;
 import org.apache.poi.ss.usermodel.*;
 
-public class ExcelReader {
+public class ExcelReaderBasic {
 
     public static void main(String[] args) {
         try {
