@@ -10,7 +10,7 @@ public class MyClient {
         // 1. 서버 연결
         Socket socket = new Socket("192.168.200.58", 10000);
 
-        // 2. 버퍼 생성
+        // 2. 버퍼리더기 생성
         BufferedReader reader = new BufferedReader(
                 new InputStreamReader(socket.getInputStream(), "utf-8")
         );
